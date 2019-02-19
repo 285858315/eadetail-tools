@@ -41,12 +41,12 @@ export default {
                     a[field[index]] = b
                     return a
                 },{})
-            })
+            }).filter(item => item.date)
         },
         async update(){
-            let eurgbp = await this.parseData("history/EURGBP_W1.csv")
-            let eurusd = await this.parseData("history/EURUSD_W1.csv")
-            let gbpusd = await this.parseData("history/GBPUSD_W1.csv")
+            let eurgbp = await this.parseData("history/EURGBP_D1.csv")
+            let eurusd = await this.parseData("history/EURUSD_D1.csv")
+            let gbpusd = await this.parseData("history/GBPUSD_D1.csv")
             console.log(eurusd[0])
             console.log(gbpusd[0])
             // let ds = new DataSet({
@@ -57,12 +57,14 @@ export default {
             // })
             // console.log(ds)
 
-            let data = eurusd.slice(0,1000)
+            let data = eurusd.slice(0,100)
             console.log(data)
             var chart = new G2.Chart({
                 container: 'c1',
                 forceFit: true,
-                height : 400
+                height : 400,
+                padding: [ 20, 20, 95, 80 ] // 上，右，下，左
+
             });
             chart.source(data);
             chart.interval().position('date*open').color('#CCC')
