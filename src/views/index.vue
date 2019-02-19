@@ -1,6 +1,6 @@
 <template>
 <div>
-    index...
+    <div id='c1'></div>
 </div>
 </template>
 
@@ -30,10 +30,18 @@ export default {
             return res.map(item => item.split("	")).map(item => {
                 return item.reduce((a,b,index) => {
                     a = a || {}
+                    switch(field[index]){
+                        case "date":
+                            // b = new Date(b)
+                            break;
+                        case "open":
+                            b = parseFloat(b)
+                            break;
+                    }
                     a[field[index]] = b
                     return a
                 },{})
-            })
+            }).filter(item => item.date)
         },
         async update(){
             let eurgbp = await this.parseData("history/EURGBP_D1.csv")
@@ -41,13 +49,26 @@ export default {
             let gbpusd = await this.parseData("history/GBPUSD_D1.csv")
             console.log(eurusd[0])
             console.log(gbpusd[0])
-            let ds = new DataSet({
-                state: {
-                    start: new Date(eurgbp[0].date).getTime(),
-                    end: new Date(eurgbp[10].date).getTime()
-                }
-            })
-            console.log(ds)
+            // let ds = new DataSet({
+            //     state: {
+            //         start: new Date(eurgbp[0].date).getTime(),
+            //         end: new Date(eurgbp[10].date).getTime()
+            //     }
+            // })
+            // console.log(ds)
+
+            let data = eurusd.slice(0,100)
+            console.log(data)
+            var chart = new G2.Chart({
+                container: 'c1',
+                forceFit: true,
+                height : 400,
+                padding: [ 20, 20, 95, 80 ] // 上，右，下，左
+
+            });
+            chart.source(data);
+            chart.interval().position('date*open').color('#CCC')
+            chart.render();
         }
     }
 }
