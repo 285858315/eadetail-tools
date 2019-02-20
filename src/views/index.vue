@@ -71,44 +71,71 @@ export default {
                     real_point:0,
                     id:group_id,
                     open:opts.datetime,
-                    lots:(getOpenGroups().length + 1)* 0.01,
+                    // lots:(getOpenGroups().length + 1)* 0.01,
+                    lots: 0.01,
+                    act:opts.act,
                 })
             }
 
             const getOpenGroups = () => {
                 return groups.filter(item => !item.is_close)
             }
-            
+
+
+            const Acts = [
+                {eurgbp:"buy",eurusd:"sell",gbpusd:"buy"},
+                {eurgbp:"sell",eurusd:"buy",gbpusd:"sell"}
+            ]
+            const d5 = 5 * 24 * 60 * 60 * 1000
+            const d10 = 10 * 24 * 60 * 60 * 1000
+            const d1 =  24 * 60 * 60 * 1000
             /**
              * 验证分组
              */
-            const checkGroups = (point,date,time) => {
-                let datetime = `${date+(time  &&  " " + time  || "")}`
+            const checkGroups = (tick,index) => {
+                const datetime = `${tick.date+(tick.time  &&  " " + tick.time  || "")}`
                 let open_groups = getOpenGroups()
-                let last = open_groups[open_groups.length - 1]
                 if(open_groups.length == 0){
-                    newGroup({datetime})
+                    newGroup({datetime,act:0})
                 }
+                open_groups = getOpenGroups()
+                const open0_groups = open_groups.filter(item => item.act == 0)
+                const open1_groups = open_groups.filter(item => item.act == 1)
                 let _最大回撤 = 0
                 open_groups.forEach(item => {
+                    let acts = Acts[item.act]
+                    let point = 0
+                    for(let symbol in acts){
+                        switch(acts[symbol]){
+                            case "buy":
+                                point += this.toFixed((history[symbol][index].close - history[symbol][index].open) / Symbol.point)
+                                break;
+                            case "sell":
+                                point += this.toFixed((history[symbol][index].open - history[symbol][index].close) / Symbol.point)
+                                break;
+                        }
+                    }
                     item.point += point
                     item.real_point = item.point * this.toFixed(item.lots / 0.01)
                     _最大回撤 += item.real_point
-                    if(item.point > 300){
+                    if(item.point > 500 || (new Date(datetime).getTime() - new Date(item.open).getTime() > d10)){
                         item.is_close = true
                         item.close = datetime
-                        item.days = (new Date(datetime).getTime() - new Date(item.open).getTime()) / (1000 * 60 * 60 * 24) 
+                        item.days = (new Date(datetime).getTime() - new Date(item.open).getTime()) / d1
                         this.log(`${item.id}:平仓%c 时间:${datetime}%c 利润:${item.real_point} `,'color:#999','color:blue;')
                     }else{
+                        //更新最大回测
                         if(item.real_point < item.max_loss){
                             item.max_loss = item.real_point
-                            this.log(`${item.id}:${item.real_point} %c 时间:${datetime}`,'color:#999')
+                            // this.log(`${item.id}:${item.real_point} %c 时间:${datetime}`,'color:#999')
                         }
                     }
                 })
                 // if(last && Math.abs(last.point) > 1000){
-                if(last && Math.abs(last.point) > 1000){
-                    newGroup({datetime})
+                let last = open_groups[open_groups.length - 1]
+                if(last && Math.abs(last.point) > 200){
+                    // newGroup({datetime,act:open0_groups.length > open1_groups.length ? 1 : 0})
+                    newGroup({datetime,act:groups.length % 2})
                 }
                 if(open_groups.length > 最大分组数){
                     最大分组数 =  open_groups.length 
@@ -120,23 +147,11 @@ export default {
                 }
             }
 
-            const act = {eurgbp:"buy",eurusd:"sell",gbpusd:"buy"}
-            // const act = {eurgbp:"sell",eurusd:"buy",gbpusd:"sell"}
+            
             history.eurgbp.forEach((item,index) => {
-                let point = 0
-                for(let symbol in act){
-                    switch(act[symbol]){
-                        case "buy":
-                            point += (history[symbol][index].close - history[symbol][index].open) / Symbol.point
-                            break;
-                        case "sell":
-                            point += (history[symbol][index].open - history[symbol][index].close) / Symbol.point
-                            break;
-                    }
-                }
-                point = parseFloat(point.toFixed(2))
-                checkGroups(point,item.date,item.time)
+                checkGroups(item,index)
             })
+
             const close_stat = groups.filter(item => item.is_close).reduce((res,item,index) => {
                 res = res || {}
                 res.count = res.count || 0
@@ -164,8 +179,8 @@ export default {
                 return res
             },{})
             this.log(`共${groups.length}组`,{最大分组数,最大分组时间,最大回撤,最大回撤时间})
-            this.log(open_stat)
-            this.log(close_stat)
+            this.log("未平仓",open_stat)
+            this.log("已平仓",close_stat)
         }
     }
 }
